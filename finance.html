@@ -63,8 +63,8 @@ const statuses={pending:'بانتظار الاعتماد',clarification:'مطل�
 const manager=()=>role==='super_admin',financeEditor=()=>manager()||grant('finance.edit');let editingExpenseId=null,editingEntry=null;
 async function expenseAction(id,action,payload={}){
  const {error}=await supabase.rpc('expense_request_action',{request_id:id||null,action_name:action,payload});
- if(error){$('expenseMessage').textContent='تعذر تنفيذ الإجراء: '+error.message;return}
- $('expenseMessage').textContent='تم تحديث الطلب';await Promise.all([loadExpenses(),load()])
+ if(error){$('expenseMessage').textContent='تعذر تنفيذ الإجراء: '+error.message;return false}
+ $('expenseMessage').textContent='تم تحديث الطلب';await Promise.all([loadExpenses(),load()]);return true
 }
 async function loadExpenses(){
  const {data,error}=await supabase.from('expense_requests').select('*').order('created_at',{ascending:false}).limit(500);
@@ -87,8 +87,8 @@ function startExpenseEdit(r){editingExpenseId=r.id;$('expenseDate').value=r.requ
 $('cancelExpenseEdit').onclick=resetExpenseEdit;
 $('submitExpense').onclick=async()=>{
  const amount=Number($('expenseAmount').value),category=$('expenseCategory').value.trim(),description=$('expenseDescription').value.trim();
- if(!(amount>0)||category.length<2||description.length<3||$('beneficiaryName').value.trim().length<2){$('expenseMessage').textContent='أدخل البند والمبلغ والبيان بصورة صحيحة';return}
- $('submitExpense').disabled=true;await expenseAction(editingExpenseId,editingExpenseId?'edit':'submit',{request_date:$('expenseDate').value||new Date().toLocaleDateString('en-CA'),category,description,amount,payment_method:$('expenseMethod').value,reference_number:$('expenseReference').value.trim(),beneficiary_name:$('beneficiaryName').value.trim()});$('submitExpense').disabled=false;resetExpenseEdit()
+ if(!(amount>0)||category.length<2||description.length<3||$('beneficiaryName').value.trim().length<2){$('expenseMessage').textContent='أدخل البند والمبلغ واسم المستفيد والبيان بصورة صحيحة';return}
+ $('submitExpense').disabled=true;const saved=await expenseAction(editingExpenseId,editingExpenseId?'edit':'submit',{request_date:$('expenseDate').value||new Date().toLocaleDateString('en-CA'),category,description,amount,payment_method:$('expenseMethod').value,reference_number:$('expenseReference').value.trim(),beneficiary_name:$('beneficiaryName').value.trim()});$('submitExpense').disabled=false;if(saved)resetExpenseEdit()
 };
 $('expenseReload').onclick=loadExpenses;
 async function loadCredits(){
