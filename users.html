@@ -12,7 +12,7 @@ body{background:#f5f7f6}
 <div class="panel"><h2 id="formTitle">إضافة مستخدم جديد</h2><form id="form"><div class="fields">
 <div><label for="fullName">اسم الموظف</label><input id="fullName" required minlength="2" maxlength="200" autocomplete="name"></div>
 <div><label for="email">الإيميل</label><input id="email" type="email" required autocomplete="email"></div>
-<div id="passwordField"><label for="password">كلمة المرور المبدئية</label><input id="password" type="password" minlength="12" maxlength="128" autocomplete="new-password" required><p class="muted">12 حرفًا على الأقل. أرسلها للموظف بقناة آمنة، واطلب تغييرها عند أول دخول.</p></div>
+<div id="passwordField"><label for="password">كلمة المرور المبدئية</label><input id="password" type="password" minlength="6" maxlength="128" autocomplete="new-password" required><p class="muted">6 أحرف على الأقل. أرسلها للموظف بقناة آمنة، واطلب تغييرها عند أول دخول.</p></div>
 <div id="teacherLinkField" hidden><label for="teacherLink">ربط الحساب بمدرس</label><select id="teacherLink"><option value="">بدون ربط</option></select></div><div id="activeField" hidden><label for="active">حالة الحساب</label><select id="active"><option value="true">نشط</option><option value="false">موقوف</option></select></div>
 <div class="full"><h3 style="font-size:15px">صلاحيات الموظف — اختيارات متعددة</h3><div id="permissions" class="perms"></div></div>
 <div class="full row"><div><button type="submit" id="save">إنشاء المستخدم</button><button type="button" id="cancel" class="secondary" hidden>إلغاء التعديل</button></div><p id="formStatus" class="status" aria-live="polite"></p></div>
