@@ -22,14 +22,10 @@ body{background:#f5f7f6}
 import{createClient}from'https://esm.sh/@supabase/supabase-js@2.57.0';
 const sb=createClient('https://uqjoxgcddpwfbjanzqpy.supabase.co',"sb_publishable_-FhtYmDD0qO6mEB2nBE_rQ_j_SE_unY");const $=x=>document.getElementById(x);
 const groups=[
- ['الطلاب',[['students.view','عرض الطلاب'],['students.edit','إضافة وتعديل الطلاب']]],
- ['المدرسون',[['teachers.view','عرض المدرسين'],['teachers.edit','إضافة وتعديل المدرسين']]],
- ['الحصص',[['lessons.view','عرض الحصص'],['lessons.edit','إدارة الحصص']]],
- ['الخدمات',[['services.view','عرض الخدمات'],['services.edit','إدارة الخدمات']]],
- ['الحسابات',[['finance.view','عرض التحصيلات والمصروفات'],['finance.edit','تسجيل القيود المالية']]],
- ['الأسعار',[['pricing.view','عرض الأسعار والمستحقات'],['pricing.edit','تعديل الأسعار']]],
- ['الفواتير',[['invoices.view','عرض الفواتير'],['invoices.create','إصدار الفواتير'],['invoices.allocate','توزيع التحصيلات']]],
- ['التقارير',[['reports.view','التقارير التشغيلية'],['audit.view','سجل العمليات'],['executive.view','لوحة المؤشرات التنفيذية']]]
+ ['الرئيسية',[['executive.view','عرض المؤشرات التنفيذية']]],
+ ['الإدارة التعليمية',[['students.view','عرض الطلاب'],['students.edit','إدارة الطلاب'],['teachers.view','عرض المدرسين'],['teachers.edit','إدارة المدرسين'],['lessons.view','عرض الحصص'],['lessons.edit','إدارة الحصص'],['services.view','عرض الخدمات'],['services.edit','إدارة الخدمات'],['groups.view','عرض المجموعات'],['groups.edit','إدارة المجموعات'],['teacher.portal','بوابة المدرس']]],
+ ['الإدارة المالية',[['finance.view','عرض الإيرادات والمصروفات'],['finance.edit','إدارة الإيرادات والمصروفات'],['pricing.view','عرض التسعير والمستحقات'],['pricing.edit','إدارة التسعير'],['invoices.view','عرض الفواتير'],['invoices.create','إصدار الفواتير'],['invoices.allocate','توزيع التحصيلات']]],
+ ['التقارير والإدارة',[['reports.view','التقارير التشغيلية'],['audit.view','سجل العمليات'],['contacts.reveal','كشف بيانات الاتصال الكاملة']]]
 ];
 const labels=Object.fromEntries(groups.flatMap(g=>g[1]));let accounts=[],permissions=[],editing=null,authUser=null;
 const msg=(t,err=false)=>{$('formStatus').textContent=t;$('formStatus').className='status'+(err?' error':'')};
