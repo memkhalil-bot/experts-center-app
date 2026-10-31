@@ -29,7 +29,11 @@ function field(obj,k){return norm(obj[k])}
 function key(r){return keyOf(r.email)||keyOf(r.phone)||keyOf(r.full_name)}
 function td(tr,s){const cell=document.createElement('td');cell.textContent=s;tr.append(cell)}
 function show(){const rows=$('rows');rows.replaceChildren();for(const row of entries.slice(0,120)){const tr=document.createElement('tr');[row.sheet,row.number,row.name,row.subjects||'—',row.issues.length?row.issues.join('؛ '):'جاهز'].forEach(v=>td(tr,v));rows.append(tr)}}
-async function currentPeople(kind){const rows=[];for(let from=0;from<5000;from+=500){const{data,error}=await sb.from(kind).select('full_name,email,phone').range(from,from+499);if(error)throw Error(error.message);rows.push(...data);if(data.length<500)return rows}throw Error('Too many existing '+kind+' records to safely check duplicates')}
+async function currentPeople(kind){
+ if(!allow('contacts.reveal'))throw Error('استيراد الأرقام والإيميلات يتطلب صلاحية كشف بيانات الاتصال. تواصل مع مدير النظام.');
+ const {data,error}=await sb.rpc('import_existing_people',{p_kind:kind});
+ if(error)throw Error(error.message);return data||[];
+}
 async function scan(){
  $('import').disabled=true;previewValid=false;entries=[];$('result').textContent='';
  if(!window.XLSX)throw Error('تعذر تحميل قارئ Excel. تحقق من الاتصال بالإنترنت.');
