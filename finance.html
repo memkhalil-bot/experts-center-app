@@ -60,7 +60,7 @@ async function getGrants(client){const{data,error}=await client.from('user_permi
 const $=id=>document.getElementById(id);let uid='',students=[],teachers=[],entries=[],role='',grant=()=>false;
 
 const statuses={pending:'بانتظار الاعتماد',clarification:'مطلوب استيضاح',resubmitted:'أُعيد للمراجعة',approved:'معتمد للصرف',rejected:'مرفوض',paid:'تم الصرف',cancelled:'ملغى'};
-const manager=()=>role==='super_admin',financeEditor=()=>manager()||grant('finance.edit');
+const manager=()=>role==='super_admin',financeEditor=()=>manager()||grant('finance.edit');let editingExpenseId=null,editingEntry=null;
 async function expenseAction(id,action,payload={}){
  const {error}=await supabase.rpc('expense_request_action',{request_id:id||null,action_name:action,payload});
  if(error){$('expenseMessage').textContent='تعذر تنفيذ الإجراء: '+error.message;return}
@@ -71,20 +71,24 @@ async function loadExpenses(){
  if(error){$('expenseMessage').textContent=error.message;return}
  const body=$('expenseRows');body.replaceChildren();
  for(const r of data||[]){const tr=document.createElement('tr');for(const value of [r.request_date,r.category,money(r.amount),statuses[r.status],(r.manager_note||'')+' '+(r.accountant_reply||'')])cell(tr,value);
- const td=document.createElement('td');const add=(text,action,needsText=false)=>{
+ const td=document.createElement('td');td.className='action-buttons';const add=(text,action,needsText=false)=>{
  const b=document.createElement('button');b.className='secondary';b.textContent=text;b.style.margin='2px';
  b.onclick=async()=>{let note='';if(needsText){note=prompt('أدخل السبب أو التوضيح')?.trim()||'';if(!note)return}if(action==='pay'&&!confirm('تأكيد الصرف الفعلي وتسجيل حركة المصروف؟'))return;b.disabled=true;await expenseAction(r.id,action,{note});b.disabled=false};td.append(b)};
  if(manager()&&['pending','resubmitted'].includes(r.status)){add('اعتماد','approve');add('طلب توضيح','clarify',true);add('رفض','reject',true)}
+ if(financeEditor()&&['pending','clarification','resubmitted'].includes(r.status)){const edit=document.createElement('button');edit.type='button';edit.className='secondary';edit.textContent='تعديل';edit.onclick=()=>startExpenseEdit(r);td.append(edit)}
  if(financeEditor()&&r.status==='clarification')add('الرد على الاستيضاح','reply',true);
- if(financeEditor()&&r.status==='approved')add('تأكيد الصرف','pay');if(r.status==='paid'&&r.financial_entry_id){const print=document.createElement('button');print.type='button';print.className='secondary';print.textContent='طباعة سند صرف';print.onclick=()=>window.open('./expense-voucher.html?id='+encodeURIComponent(r.id),'_blank','noopener');td.append(print)}
- if(financeEditor()&&['pending','clarification','resubmitted'].includes(r.status))add('إلغاء الطلب','cancel');
+ if(financeEditor()&&r.status==='approved'){const approve=document.createElement('button');approve.type='button';approve.className='secondary';approve.textContent='✓ اعتماد المدير — صرف الآن';approve.onclick=async()=>{if(!confirm('الطلب معتمد. هل تؤكد الصرف الفعلي وإصدار إذن صرف متسلسل؟'))return;approve.disabled=true;await expenseAction(r.id,'pay');approve.disabled=false};td.append(approve)}if(r.status==='paid'&&r.financial_entry_id){const print=document.createElement('button');print.type='button';print.className='secondary';print.textContent='طباعة سند صرف';print.onclick=()=>window.open('./expense-voucher.html?id='+encodeURIComponent(r.id),'_blank','noopener');td.append(print)}
+ if(financeEditor()&&['pending','clarification','resubmitted','rejected'].includes(r.status))add('حذف / إلغاء','cancel');
  if(!td.childNodes.length)td.textContent='—';tr.append(td);body.append(tr)}
  if(!data?.length){const tr=document.createElement('tr');const td=cell(tr,'لا توجد طلبات مصروفات');td.colSpan=6;body.append(tr)}
 }
+function resetExpenseEdit(){editingExpenseId=null;$('submitExpense').textContent='إرسال طلب اعتماد';$('cancelExpenseEdit').hidden=true;$('expenseCreate').classList.remove('edit-mode');for(const key of ['expenseCategory','expenseAmount','expenseDescription','expenseReference','beneficiaryName'])$(key).value='';$('expenseDate').value=new Date().toLocaleDateString('en-CA');$('expenseMethod').value='bank'}
+function startExpenseEdit(r){editingExpenseId=r.id;$('expenseDate').value=r.request_date;$('expenseCategory').value=r.category;$('expenseAmount').value=r.amount;$('expenseDescription').value=r.description;$('expenseMethod').value=r.payment_method;$('expenseReference').value=r.reference_number||'';$('beneficiaryName').value=r.beneficiary_name||'';$('submitExpense').textContent='حفظ تعديل طلب المصروف';$('cancelExpenseEdit').hidden=false;$('expenseCreate').classList.add('edit-mode');$('expenseCreate').scrollIntoView({behavior:'smooth',block:'start'})}
+$('cancelExpenseEdit').onclick=resetExpenseEdit;
 $('submitExpense').onclick=async()=>{
  const amount=Number($('expenseAmount').value),category=$('expenseCategory').value.trim(),description=$('expenseDescription').value.trim();
- if(!(amount>0)||category.length<2||description.length<3){$('expenseMessage').textContent='أدخل البند والمبلغ والبيان بصورة صحيحة';return}
- $('submitExpense').disabled=true;await expenseAction(null,'submit',{request_date:$('expenseDate').value||new Date().toLocaleDateString('en-CA'),category,description,amount,payment_method:$('expenseMethod').value,reference_number:$('expenseReference').value.trim()});$('submitExpense').disabled=false
+ if(!(amount>0)||category.length<2||description.length<3||$('beneficiaryName').value.trim().length<2){$('expenseMessage').textContent='أدخل البند والمبلغ والبيان بصورة صحيحة';return}
+ $('submitExpense').disabled=true;await expenseAction(editingExpenseId,editingExpenseId?'edit':'submit',{request_date:$('expenseDate').value||new Date().toLocaleDateString('en-CA'),category,description,amount,payment_method:$('expenseMethod').value,reference_number:$('expenseReference').value.trim(),beneficiary_name:$('beneficiaryName').value.trim()});$('submitExpense').disabled=false;resetExpenseEdit()
 };
 $('expenseReload').onclick=loadExpenses;
 async function loadCredits(){
@@ -111,11 +115,11 @@ async function loadCredits(){
  for(const {inv,src,balance} of rows){const tr=document.createElement('tr');const name=students.find(x=>x.id===inv.student_id)?.full_name||'—';
  const paidAmount=paid.get(inv.id)||0;const due=src.due_date||'—';
  const state=balance<=0?'محصل':paidAmount>0?'محصل جزئيًا':(due!=='—'&&due<new Date().toISOString().slice(0,10)?'متأخر':'آجل');
- for(const value of [name,src.subject||src.description,inv.invoice_no,due,money(inv.amount),money(paidAmount),money(balance),state])cell(tr,value);body.append(tr)}
+ for(const value of [name,src.subject||src.description,inv.invoice_no,due,money(inv.amount),money(paidAmount),money(balance),state])cell(tr,value);const actions=cell(tr,'');if(financeEditor()){const link=document.createElement('a');link.href='./invoices.html';link.textContent='مراجعة / تصحيح الفاتورة';link.onclick=ev=>{if(window.parent!==window){ev.preventDefault();parent.postMessage({type:'alkhubara:navigate',route:'invoices'},location.origin)}};actions.append(link)}else actions.textContent='عرض فقط';body.append(tr)}
  for(const {src,kind} of unbilled){const tr=document.createElement('tr');const name=students.find(x=>x.id===src.student_id)?.full_name||'—';
- for(const value of [name,kind+' — '+(src.subject||src.description||'—'),'لم تُصدر',src.due_date||'—','لم يُسعَّر بعد','—','—','بانتظار الفوترة'])cell(tr,value);
+ for(const value of [name,kind+' — '+(src.subject||src.description||'—'),'لم تُصدر',src.due_date||'—','لم يُسعَّر بعد','—','—','بانتظار الفوترة'])cell(tr,value);const td=cell(tr,'');const link=document.createElement('a');link.href='./operations.html';link.textContent='فتح المصدر للتعديل';link.onclick=ev=>{if(window.parent!==window){ev.preventDefault();parent.postMessage({type:'alkhubara:navigate',route:'operations'},location.origin)}};td.append(link);
  body.append(tr)}
- if(!rows.length&&!unbilled.length){const tr=document.createElement('tr');const td=cell(tr,'لا توجد مستحقات آجلة');td.colSpan=8;body.append(tr)}
+ if(!rows.length&&!unbilled.length){const tr=document.createElement('tr');const td=cell(tr,'لا توجد مستحقات آجلة');td.colSpan=9;body.append(tr)}
 }
 
 const labels={receipt:'تحصيل',expense:'مصروف',teacher_payment:'صرف مدرس',reversal:'قيد عكسي'};
@@ -132,7 +136,7 @@ async function loadPeople(){
  students=s.data||[];teachers=t.data||[];fill($('student_id'),students);fill($('teacher_id'),teachers);
 }
 async function load(){
- const {data,error}=await supabase.from('financial_entries').select('id,entry_date,entry_type,student_id,teacher_id,amount,category,description,reference_number,reverses_entry_id,created_at').order('created_at',{ascending:false}).limit(500);
+ const {data,error}=await supabase.from('financial_entries').select('id,entry_date,entry_type,student_id,teacher_id,amount,category,description,reference_number,payment_method,reverses_entry_id,created_at').order('created_at',{ascending:false}).limit(500);
  if(error){msg('فشل تحميل الحركات: '+error.message,true);return}
  entries=data||[];$('rows').replaceChildren();$('count').textContent=entries.length+' قيد معروض (حد أقصى 500)';
  const reversed=new Set(entries.filter(e=>e.entry_type==='reversal'&&e.reverses_entry_id).map(e=>e.reverses_entry_id));
@@ -145,10 +149,14 @@ async function load(){
  $('receipts').textContent=money(totals.receipt);$('expenses').textContent=money(totals.expense);$('teachersPaid').textContent=money(totals.teacher_payment);
  if(!entries.length){const tr=document.createElement('tr');const td=cell(tr,'لا توجد حركات مالية بعد');td.colSpan=7;$('rows').append(tr)}
  for(const e of entries){const tr=document.createElement('tr');cell(tr,e.entry_date);cell(tr,labels[e.entry_type]||e.entry_type);cell(tr,e.entry_type==='receipt'?person(students,e.student_id):e.entry_type==='teacher_payment'?person(teachers,e.teacher_id):'—');cell(tr,e.category);cell(tr,(e.entry_type==='reversal'?'-':'')+money(e.amount));cell(tr,e.reference_number);
-  const td=document.createElement('td');if((role==='super_admin'||grant('finance.edit'))&&e.entry_type!=='reversal'&&!reversed.has(e.id)){
+  const td=document.createElement('td');td.className='action-buttons';if((role==='super_admin'||grant('finance.edit'))&&e.entry_type!=='reversal'&&!reversed.has(e.id)){
+   const edit=document.createElement('button');edit.type='button';edit.className='secondary';edit.textContent='تعديل';edit.onclick=()=>startEntryEdit(e);td.append(edit);
    const b=document.createElement('button');b.type='button';b.className='secondary';b.textContent='حذف / إلغاء';b.addEventListener('click',()=>reverse(e,b));td.append(b)
   }else td.textContent=e.entry_type==='reversal'?'تصحيح':'معكوس';tr.append(td);$('rows').append(tr)}
 }
+function resetEntryEdit(){editingEntry=null;$('form').reset();$('entry_date').value=new Date().toLocaleDateString('en-CA');$('save').textContent='حفظ القيد المالي';$('cancelEntryEdit').hidden=true;$('form').classList.remove('edit-mode');$('entry_type').disabled=false;setType()}
+function startEntryEdit(e){editingEntry=e;$('entry_type').value=e.entry_type;setType();$('entry_type').disabled=true;$('entry_date').value=e.entry_date;$('amount').value=e.amount;$('category').value=e.category;$('description').value=e.description||'';$('reference_number').value=e.reference_number||'';$('payment_method').value=e.payment_method||'cash';if(e.student_id)$('student_id').value=e.student_id;if(e.teacher_id)$('teacher_id').value=e.teacher_id;$('save').textContent='حفظ التصحيح المالي';$('cancelEntryEdit').hidden=false;$('form').classList.add('edit-mode');$('form').scrollIntoView({behavior:'smooth',block:'start'})}
+$('cancelEntryEdit').onclick=resetEntryEdit;
 async function reverse(entry,button){
  const reason=prompt('سبب حذف / إلغاء الحركة (5 حروف على الأقل). لن تختفي الحركة الأصلية من سجل التدقيق:')?.trim();
  if(!reason)return;if(reason.length<5){msg('اكتب سبب الإلغاء بوضوح',true);return}
@@ -165,9 +173,9 @@ $('form').addEventListener('submit',async ev=>{
  if(!Number.isFinite(amount)||amount<=0){msg('المبلغ غير صالح',true);return}
  const payload={entry_date:$('entry_date').value,entry_type:type,amount,category:$('category').value.trim(),description:$('description').value.trim()||null,reference_number:$('reference_number').value.trim()||null,payment_method:$('payment_method').value,student_id:type==='receipt'?$('student_id').value:null,teacher_id:type==='teacher_payment'?$('teacher_id').value:null,created_by:uid};
  if((type==='receipt'&&!payload.student_id)||(type==='teacher_payment'&&!payload.teacher_id)){msg('اختر الطرف المرتبط بالقيد',true);return}
- $('save').disabled=true;const {error}=await supabase.from('financial_entries').insert(payload);$('save').disabled=false;
+ $('save').disabled=true;let error;if(editingEntry){const reason=prompt('سبب تصحيح الحركة (5 أحرف على الأقل):')?.trim();if(!reason||reason.length<5){$('save').disabled=false;return msg('أدخل سبب التصحيح',true)}const outcome=await supabase.rpc('correct_financial_entry',{p_entry_id:editingEntry.id,p_fields:payload,p_reason:reason});error=outcome.error}else{const outcome=await supabase.from('financial_entries').insert(payload);error=outcome.error}$('save').disabled=false;
  if(error){msg('فشل حفظ القيد: '+error.message,true);return}
- $('form').reset();$('entry_date').value=new Date().toLocaleDateString('en-CA');setType();msg('تم تسجيل الحركة بنجاح');await load();
+ resetEntryEdit();msg('تم حفظ الحركة / التصحيح المالي بنجاح');await load();
 });
 $('reload').addEventListener('click',async()=>{await loadPeople();await Promise.all([load(),loadExpenses(),loadCredits()])});
 $('logout').addEventListener('click',async()=>{await supabase.auth.signOut();location.replace('./login.html')});
