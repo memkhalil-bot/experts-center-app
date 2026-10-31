@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap');
 /* AlKhubara unified visual and accessibility layer — RTL, desktop & mobile */
 :root{--kh-green:#125e49;--kh-ink:#173a30;--kh-line:#dce7df;--kh-muted:#60766a;--kh-bg:#f5f7f6;--kh-focus:#d3e9db}
 html{font-family:'Cairo',Tahoma,Arial,sans-serif;font-synthesis:none;-webkit-text-size-adjust:100%}
