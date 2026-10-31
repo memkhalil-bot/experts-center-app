@@ -59,7 +59,7 @@ function init(table,index){
  left.append(previous,pageText,next,selectionText,exportButton);footer.append(right,left);wrap.insertAdjacentElement("afterend",footer);
  let currentPage=1,lock=false,rows=[],selected=new Set(),headRow=null,master=null;
  const visibleRows=()=>Array.from(body.rows).filter(r=>r.cells.length>0&&!r.dataset.khPlaceholder);
- function keepExportRule(){exportButton.hidden=isStudentTable();exportButton.disabled=exportButton.hidden||!rows.some(r=>!r.dataset.khPlaceholder)}
+ function keepExportRule(){exportButton.hidden=isPeople();exportButton.disabled=exportButton.hidden||!rows.some(r=>!r.dataset.khPlaceholder)}
  function ensureHeader(){
   const header=head.rows[0];if(!header)return;
   if(header!==headRow){headRow=header;master=null}
