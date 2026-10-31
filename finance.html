@@ -76,7 +76,7 @@ async function loadExpenses(){
  b.onclick=async()=>{let note='';if(needsText){note=prompt('أدخل السبب أو التوضيح')?.trim()||'';if(!note)return}if(action==='pay'&&!confirm('تأكيد الصرف الفعلي وتسجيل حركة المصروف؟'))return;b.disabled=true;await expenseAction(r.id,action,{note});b.disabled=false};td.append(b)};
  if(manager()&&['pending','resubmitted'].includes(r.status)){add('اعتماد','approve');add('طلب توضيح','clarify',true);add('رفض','reject',true)}
  if(financeEditor()&&r.status==='clarification')add('الرد على الاستيضاح','reply',true);
- if(financeEditor()&&r.status==='approved')add('تأكيد الصرف','pay');
+ if(financeEditor()&&r.status==='approved')add('تأكيد الصرف','pay');if(r.status==='paid'&&r.financial_entry_id){const print=document.createElement('button');print.type='button';print.className='secondary';print.textContent='طباعة سند صرف';print.onclick=()=>window.open('./expense-voucher.html?id='+encodeURIComponent(r.id),'_blank','noopener');td.append(print)}
  if(financeEditor()&&['pending','clarification','resubmitted'].includes(r.status))add('إلغاء الطلب','cancel');
  if(!td.childNodes.length)td.textContent='—';tr.append(td);body.append(tr)}
  if(!data?.length){const tr=document.createElement('tr');const td=cell(tr,'لا توجد طلبات مصروفات');td.colSpan=6;body.append(tr)}
