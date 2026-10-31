@@ -38,3 +38,39 @@ table tbody tr:hover{background:#f6faf7}
 }
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
 @media print{button,.toolbar,.tabs,nav{display:none!important}body{background:#fff!important;color:#111}main{max-width:100%;padding:0!important}.panel,.card{break-inside:avoid;box-shadow:none!important}}
+
+/* Daily-use improvements: readable records, actions and forms */
+:root{--kh-primary:#12684e;--kh-primary-dark:#0b523f;--kh-warning:#b86c29;--kh-danger:#b43c34}
+body{font-size:14px;letter-spacing:0}
+p{max-width:100%;overflow-wrap:break-word}
+.panel,.card{box-shadow:0 3px 14px rgba(17,57,42,.035)}
+.panel>h2:first-child,.card>h2:first-child{letter-spacing:-.15px}
+label{color:#355749}
+input:not([type="checkbox"]):not([type="radio"]),select,textarea{border:1px solid #c7d7ce;border-radius:9px;background-color:#fff;transition:border-color .15s,box-shadow .15s}
+input:not([type="checkbox"]):not([type="radio"]):focus,select:focus,textarea:focus{border-color:var(--kh-primary)!important;box-shadow:0 0 0 3px rgba(18,104,78,.10)!important;outline:none!important}
+input::placeholder,textarea::placeholder{color:#85988e}
+button,.action{font-weight:750}
+button:active:not(:disabled){transform:translateY(1px)}
+button.danger{border:1px solid #e9c8c5!important;background:#fff3f2!important;color:#ad4038!important}
+button.danger:hover:not(:disabled){background:#fce5e2!important}
+table{width:100%;border-spacing:0}
+table th{font-weight:800;color:#3a5f4d;background:#edf5ef}
+table tbody tr:nth-child(even){background:#fafcfb}
+table tbody tr:hover{background:#eaf5ed!important}
+table td{overflow-wrap:break-word}
+table button{font-size:12px!important;min-height:36px!important;margin:2px!important;padding:5px 10px!important;white-space:nowrap}
+.wrap,.tablewrap,.kh-table-container{border-radius:9px}
+[role="status"],[aria-live]{overflow-wrap:anywhere}
+.status:not(:empty),#message:not(:empty),#formStatus:not(:empty),#listStatus:not(:empty){line-height:1.8}
+:focus-visible{scroll-margin:18px}
+@media(max-width:740px){
+ .row,.toolbar{gap:8px}
+ .fields,.grid{grid-template-columns:1fr!important}
+ .fields>.full,.grid>.full{grid-column:1/-1}
+ .navbtn{min-height:46px}
+ .panel,.card{margin-bottom:12px}
+ table{min-width:max-content;font-size:12px}
+ table th,table td{white-space:normal}
+ button{min-height:44px}
+}
+@media print{.panel,.card{box-shadow:none}table{min-width:0!important}a{color:inherit}}
