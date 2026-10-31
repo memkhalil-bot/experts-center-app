@@ -90,7 +90,7 @@ $('collectSave').disabled=!priceData.length||r?.payment_status==='paid';
 if(priceData.length)$('collectAmount').value=(Number(priceData[0].student_hourly_rate)*Number(r.hours)).toFixed(2)}
 
 const roleLabels={secretary:'سكرتارية',accountant:'محاسب',admin:'مدير',super_admin:'مدير عام'};
-const statusLabels={scheduled:'مجدولة',confirmed:'مؤكدة',completed:'تمت',cancelled:'ملغاة',new:'جديد',in_progress:'جارٍ التنفيذ'};
+const statusLabels={scheduled:'مجدولة',confirmed:'مؤكدة',pending_review:'بانتظار مراجعة الإدارة',completed:'تمت',cancelled:'ملغاة',new:'جديد',in_progress:'جارٍ التنفيذ'};
 const paymentLabels={unpaid:'غير مدفوع',partial:'جزئيًا',paid:'مدفوع'};
 const serviceLabels={homework:'واجب',research:'بحث',project:'مشروع',other:'أخرى'};
 let role='',kind='lessons',uid='',canEdit=false,records=[],checkGrant=null,students=[],teachers=[],editing=null,canCollect=false;
@@ -108,9 +108,9 @@ function configure(){
  for(const id of ['serviceTypeField','descriptionField'])$(id).hidden=lesson;
  $('teacher_id').required=lesson;$('start_time').required=lesson;$('end_time').required=lesson;$('hours').required=false;$('subject').required=lesson;$('description').required=!lesson;
  $('statusInput').replaceChildren();
- for(const [value,label] of (lesson?[['scheduled','مجدولة'],['confirmed','مؤكدة'],['completed','تمت'],['cancelled','ملغاة']]:[['new','جديد'],['in_progress','جارٍ التنفيذ'],['completed','مكتمل'],['cancelled','ملغاة']])){const op=document.createElement('option');op.value=value;op.textContent=label;$('statusInput').append(op)}
+ for(const [value,label] of (lesson?[['scheduled','مجدولة'],['confirmed','مؤكدة'],['pending_review','بانتظار مراجعة الإدارة'],['completed','تمت'],['cancelled','ملغاة']]:[['new','جديد'],['in_progress','جارٍ التنفيذ'],['completed','مكتمل'],['cancelled','ملغاة']])){const op=document.createElement('option');op.value=value;op.textContent=label;$('statusInput').append(op)}
  $('formTitle').textContent=lesson?'إضافة حصة':'إضافة خدمة تعليمية';$('tableTitle').textContent=lesson?'سجل الحصص':'سجل الخدمات';$('save').textContent=lesson?'حفظ الحصة':'حفظ الخدمة';$('search').placeholder=lesson?'بحث بالطالب أو المدرس أو المادة...':'بحث بالطالب أو وصف الخدمة...';
- const cols=lesson?['التاريخ','الطالب','المدرس','المادة','الوقت','الساعات','الحالة','السداد','الإجراءات']:['التاريخ','الطالب','نوع الخدمة','الوصف','الحالة','السداد','الإجراءات'];
+ const cols=lesson?['التاريخ','الطالب','المدرس','المادة','البداية','النهاية','الساعات','الحالة','السداد','الإجراءات']:['التاريخ','الطالب','نوع الخدمة','الوصف','الحالة','السداد','الإجراءات'];
  $('head').replaceChildren();cols.forEach(x=>{const th=document.createElement('th');th.textContent=x;$('head').append(th)});
  $('noPeople').hidden=students.length>0 && (!lesson||teachers.length>0);toggleCredit();
 }
@@ -135,9 +135,9 @@ function render(){
  const q=$('search').value.trim().toLocaleLowerCase('ar'),date=$('dateFilter').value;
  const filtered=records.filter(r=>{const hay=[nameOf(students,r.student_id),nameOf(teachers,r.teacher_id),r.subject,r.description,serviceLabels[r.service_type]].join(' ').toLocaleLowerCase('ar');return (!q||hay.includes(q))&&(!date||(r.lesson_date||r.service_date)===date)});
  $('count').textContent=filtered.length+' سجل معروض (حد أقصى 500)';$('rows').replaceChildren();
- if(!filtered.length){const tr=document.createElement('tr');const td=textCell(tr,'لا توجد سجلات مطابقة');td.colSpan=kind==='lessons'?9:7;$('rows').append(tr);return}
+ if(!filtered.length){const tr=document.createElement('tr');const td=textCell(tr,'لا توجد سجلات مطابقة');td.colSpan=kind==='lessons'?10:7;$('rows').append(tr);return}
  for(const rec of filtered){const tr=document.createElement('tr');textCell(tr,rec.lesson_date||rec.service_date);textCell(tr,nameOf(students,rec.student_id));
-  if(kind==='lessons'){textCell(tr,nameOf(teachers,rec.teacher_id));textCell(tr,rec.subject);textCell(tr,rec.start_time?.slice(0,5));textCell(tr,rec.hours)}
+  if(kind==='lessons'){textCell(tr,nameOf(teachers,rec.teacher_id));textCell(tr,rec.subject);textCell(tr,rec.start_time?.slice(0,5));textCell(tr,rec.end_time?.slice(0,5));textCell(tr,rec.hours)}
   else{textCell(tr,serviceLabels[rec.service_type]);textCell(tr,rec.description)}
   textCell(tr,statusLabels[rec.status]||rec.status);textCell(tr,paymentLabels[rec.payment_status]||rec.payment_status);
   const td=document.createElement('td');td.className='actions';
