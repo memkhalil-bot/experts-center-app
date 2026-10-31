@@ -1,0 +1,39 @@
+/* AlKhubara unified visual and accessibility layer — RTL, desktop & mobile */
+:root{--kh-green:#125e49;--kh-ink:#173a30;--kh-line:#dce7df;--kh-muted:#60766a;--kh-bg:#f5f7f6;--kh-focus:#d3e9db}
+html{font-family:'Cairo',Tahoma,Arial,sans-serif;font-synthesis:none;-webkit-text-size-adjust:100%}
+body,button,input,select,textarea{font-family:'Cairo',Tahoma,Arial,sans-serif!important}
+body{color:var(--kh-ink);line-height:1.7}
+h1,h2,h3{line-height:1.45;overflow-wrap:anywhere}
+a{overflow-wrap:anywhere;text-underline-offset:3px}
+button,input,select,textarea{max-width:100%;box-sizing:border-box}
+button{transition:filter .16s ease,box-shadow .16s ease;touch-action:manipulation}
+button:hover:not(:disabled){filter:brightness(.96)}
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px solid var(--kh-focus)!important;outline-offset:2px}
+button:disabled{cursor:not-allowed;opacity:.52}
+input,select,textarea{min-height:43px}
+input[type="checkbox"],input[type="radio"]{min-height:auto}
+input[readonly]{background:#f2f5f2;color:#365448}
+[hidden]{display:none!important}
+.panel,.card,main{min-width:0}
+.fields,.grid{min-width:0}
+.fields>*{min-width:0}
+.tablewrap,.wrap,.table-container,.kh-table-container{max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}
+table{max-width:100%;border-collapse:collapse}
+table th,table td{vertical-align:middle}
+table tbody tr:hover{background:#f6faf7}
+.toolbar{row-gap:10px}
+.error,[role="alert"]{overflow-wrap:anywhere}
+@media(max-width:680px){
+ body{font-size:14px}
+ main{padding:14px!important}
+ .panel,.card{padding:15px!important;border-radius:12px}
+ .toolbar{flex-wrap:wrap}
+ h1{font-size:clamp(20px,5vw,25px)}
+ h2{font-size:clamp(17px,4vw,21px)}
+ table{font-size:12px}
+ th,td{padding:9px 7px}
+ button{min-height:42px}
+ input,select,textarea{font-size:16px}
+}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
+@media print{button,.toolbar,.tabs,nav{display:none!important}body{background:#fff!important;color:#111}main{max-width:100%;padding:0!important}.panel,.card{break-inside:avoid;box-shadow:none!important}}
