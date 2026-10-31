@@ -49,7 +49,7 @@ body{background:#f5f7f6}
 <div id="descriptionField" class="wide" hidden><label for="description">وصف الخدمة *</label><input id="description" maxlength="1000"></div>
 <div><label for="statusInput">حالة العملية</label><select id="statusInput"></select></div>
 <div><label for="payment_status">حالة السداد الفعلية</label><select id="payment_status" disabled><option value="unpaid">لم يُحصّل</option><option value="partial">محصل جزئيًا</option><option value="paid">محصل بالكامل</option></select></div>
-<div id="lessonPriceField"><label for="lessonPrice">قيمة الحصة (ر.ق)</label><input id="lessonPrice" readonly value="بانتظار تسعير الحصة"><small class="muted">يُحتسب من سعر الساعة المعتمد × مدة الحصة. السداد والتأكيد من الفواتير والتحصيلات فقط.</small></div>
+<div id="lessonPriceField"><label for="lessonPrice">قيمة الحصة (ر.ق)</label><input id="lessonPrice" type="number" min="50" max="2000" step="0.01" inputmode="decimal" placeholder="أدخل مبلغًا من 50 إلى 2000 ر.ق"><small class="muted">قيمة الحصة كاملة، يحددها المدرس أو المدير المخوّل (50–2000 ر.ق). مستحق المدرس يُحدد من وحدة التسعير بصورة منفصلة.</small></div>
 <div><label for="paymentTerms">طريقة السداد</label><select id="paymentTerms"><option value="immediate">فوري</option><option value="credit">آجل</option></select></div><div id="dueField" hidden><label for="dueDate">تاريخ الاستحقاق *</label><input type="date" id="dueDate"></div><div id="notesField" class="wide"><label for="notes">ملاحظات</label><textarea id="notes" maxlength="3000"></textarea></div>
 <div class="full toolbar"><button id="save" type="submit">حفظ الحصة</button><button id="cancel" class="secondary" type="button" hidden>إلغاء التعديل</button></div></form>
 <p id="noPeople" class="muted" hidden>أضف طالبًا ومدرسًا أولًا من <a href="./people.html">وحدة الطلاب والمدرسين</a>.</p>
@@ -81,13 +81,12 @@ let catalog=[],priceData=[];
 async function loadSubjects(){const {data,error}=await supabase.from('academic_subjects').select('id,subject_name').order('subject_name');if(error){note('تعذر تحميل المواد: '+error.message,true);return}
 catalog=data||[];const field=$('subject'),keep=field.value;field.replaceChildren();const placeholder=document.createElement('option');placeholder.value='';placeholder.textContent='اختر المادة المسجلة';field.append(placeholder);
 for(const x of catalog){const o=document.createElement('option');o.value=x.subject_name;o.textContent=x.subject_name;field.append(o)}field.value=keep;$('noSubjects').hidden=catalog.length>0}
-async function refreshPrice(){const field=$('lessonPrice');if(!field)return;const rate=priceData.find(x=>x.lesson_id===editing);
-field.value=rate&&Number($('hours').value)>0?(Number(rate.student_hourly_rate)*Number($('hours').value)).toFixed(2):'بانتظار تسعير الحصة'}
+async function refreshPrice(){if(!editing)return;const rate=priceData.find(x=>x.lesson_id===editing);const record=records.find(x=>x.id===editing);if(record?.lesson_total_price!=null){$('lessonPrice').value=Number(record.lesson_total_price).toFixed(2)}else if(rate&&Number($('hours').value)>0){$('lessonPrice').value=(Number(rate.student_hourly_rate)*Number($('hours').value)).toFixed(2)}else $('lessonPrice').value=''}
 async function loadPrice(){priceData=[];if(!editing){refreshPrice();return}const{data,error}=await supabase.from('lesson_rates').select('lesson_id,student_hourly_rate').eq('lesson_id',editing);if(!error)priceData=data||[];refreshPrice();const r=records.find(x=>x.id===editing);const ready=kind==='lessons'&&r?.status==='completed'&&!r?.is_archived;
 $('collectPanel').hidden=!(ready&&canCollect);
 $('collectHint').textContent=!priceData.length?'الحصة تحتاج تسعيرًا أولًا من وحدة التسعير والمستحقات.':r?.payment_status==='paid'?'الحصة محصلة بالكامل؛ يمنع النظام التحصيل الزائد.':'تأكد من المبلغ قبل التحصيل؛ ستُنشأ الفاتورة ويرتبط التحصيل بها تلقائيًا.';
 $('collectSave').disabled=!priceData.length||r?.payment_status==='paid';
-if(priceData.length)$('collectAmount').value=(Number(priceData[0].student_hourly_rate)*Number(r.hours)).toFixed(2)}
+if(priceData.length)$('collectAmount').value=(r.lesson_total_price!=null?Number(r.lesson_total_price):(Number(priceData[0].student_hourly_rate)*Number(r.hours))).toFixed(2)}
 
 const roleLabels={secretary:'سكرتارية',accountant:'محاسب',admin:'مدير',super_admin:'مدير عام'};
 const statusLabels={scheduled:'مجدولة',confirmed:'مؤكدة',pending_review:'بانتظار مراجعة الإدارة',completed:'تمت',cancelled:'ملغاة',new:'جديد',in_progress:'جارٍ التنفيذ'};
@@ -115,7 +114,7 @@ function configure(){
  $('noPeople').hidden=students.length>0 && (!lesson||teachers.length>0);toggleCredit();
 }
 function clearForm(){
- editing=null;priceData=[];$('collectPanel').hidden=true;$('form').reset();$('dueDate').value='';$('end_time').value='10:00';$('date').value=new Date().toLocaleDateString('en-CA');$('start_time').value='09:00';calculateHours();$('cancel').hidden=true;configure();
+ editing=null;priceData=[];$('collectPanel').hidden=true;$('form').reset();$('lessonPrice').value='';$('dueDate').value='';$('end_time').value='10:00';$('date').value=new Date().toLocaleDateString('en-CA');$('start_time').value='09:00';calculateHours();$('cancel').hidden=true;configure();
 }
 $('student_id').addEventListener('change',()=>{if(editing||kind!=='lessons')return;const student=students.find(x=>x.id===$('student_id').value);if(!student)return;$('paymentTerms').value=student.default_payment_terms||'immediate';if(student.default_payment_terms==='credit')$('dueDate').value=addDays($('date').value,Math.min(30,Number(student.default_credit_days)||30));toggleCredit()});
 async function loadPeople(){
@@ -126,7 +125,7 @@ async function loadPeople(){
 async function load(){
  const key=kind==='lessons'?'lessons':'services';canEdit=role==='super_admin'||checkGrant(key+'.edit');$('editor').hidden=!canEdit;$('readonly').hidden=canEdit;if(role!=='super_admin'&&!canEdit&&!checkGrant(key+'.view')){note('ليس لديك صلاحية لهذا القسم',true);$('rows').replaceChildren();return}
  $('count').textContent='جارٍ التحميل...';$('rows').replaceChildren();
- const cols=kind==='lessons'?'id,student_id,teacher_id,lesson_date,start_time,end_time,hours,subject,lesson_location,status,payment_status,payment_terms,due_date,notes,is_archived':'id,student_id,service_date,service_type,description,status,payment_status,payment_terms,due_date,is_archived';
+ const cols=kind==='lessons'?'id,student_id,teacher_id,lesson_date,start_time,end_time,hours,lesson_total_price,subject,lesson_location,status,payment_status,payment_terms,due_date,notes,is_archived':'id,student_id,service_date,service_type,description,status,payment_status,payment_terms,due_date,is_archived';
  const {data,error}=await supabase.from(kind).select(cols).eq('is_archived',$('archived').checked).order(kind==='lessons'?'lesson_date':'service_date',{ascending:false}).limit(500);
  if(error){note('تعذر تحميل السجلات: '+error.message,true);$('count').textContent='خطأ في التحميل';return}
  records=data||[];render();
@@ -154,9 +153,11 @@ $('form').addEventListener('submit',async e=>{e.preventDefault();if(!canEdit)ret
  const payload={student_id:$('student_id').value,status:$('statusInput').value,payment_terms:$('paymentTerms').value,due_date:$('paymentTerms').value==='credit'?$('dueDate').value:null,updated_by:uid};
  if(kind==='lessons')Object.assign(payload,{lesson_date:$('date').value,teacher_id:$('teacher_id').value,start_time:$('start_time').value,end_time:$('end_time').value,lesson_location:$('lesson_location').value,subject:$('subject').value,notes:$('notes').value.trim()||null});
  else Object.assign(payload,{service_date:$('date').value,service_type:$('service_type').value,description:$('description').value.trim()});
- if(kind==='lessons'&&!calculateHours()){note('وقت النهاية يجب أن يكون بعد البداية',true);return}if(payload.payment_terms==='credit'&&!payload.due_date){note('تاريخ الاستحقاق مطلوب للسداد الآجل',true);return}if(payload.payment_terms==='credit'){const delta=(Date.parse(payload.due_date+'T00:00:00')-Date.parse($('date').value+'T00:00:00'))/86400000;if(delta<0||delta>30){note('تاريخ الاستحقاق من يوم الحصة وحتى 30 يومًا',true);return}}if(!payload.student_id||(kind==='lessons'&&(!payload.teacher_id||!payload.subject))){note('أكمل البيانات المطلوبة',true);return}
- $('save').disabled=true;const r=editing?await supabase.from(kind).update(payload).eq('id',editing):await supabase.from(kind).insert({...payload,created_by:uid});$('save').disabled=false;
- if(r.error){note('فشل الحفظ: '+r.error.message,true);return}clearForm();note('تم حفظ السجل بنجاح');await load()});
+ if(kind==='lessons'&&!calculateHours()){note('وقت النهاية يجب أن يكون بعد البداية',true);return}if(kind==='lessons'&&(!Number.isFinite(Number($('lessonPrice').value))||Number($('lessonPrice').value)<50||Number($('lessonPrice').value)>2000||!$('lessonPrice').value)){note('قيمة الحصة يجب أن تكون من 50 إلى 2000 ريال',true);return}if(payload.payment_terms==='credit'&&!payload.due_date){note('تاريخ الاستحقاق مطلوب للسداد الآجل',true);return}if(payload.payment_terms==='credit'){const delta=(Date.parse(payload.due_date+'T00:00:00')-Date.parse($('date').value+'T00:00:00'))/86400000;if(delta<0||delta>30){note('تاريخ الاستحقاق من يوم الحصة وحتى 30 يومًا',true);return}}if(!payload.student_id||(kind==='lessons'&&(!payload.teacher_id||!payload.subject))){note('أكمل البيانات المطلوبة',true);return}
+ $('save').disabled=true;const r=editing?await supabase.from(kind).update(payload).eq('id',editing).select('id').single():await supabase.from(kind).insert({...payload,created_by:uid}).select('id').single();
+ if(r.error){$('save').disabled=false;note('فشل الحفظ: '+r.error.message,true);return}
+ if(kind==='lessons'){const price=await supabase.rpc('set_lesson_price',{p_lesson_id:r.data.id,p_total:Number($('lessonPrice').value)});if(price.error){$('save').disabled=false;note('تم حفظ الحصة لكن تعذر حفظ السعر: '+price.error.message,true);editing=r.data.id;return}}
+ $('save').disabled=false;clearForm();note('تم حفظ السجل وسعر الحصة بنجاح');await load()});
 $('collectSave').addEventListener('click',async()=>{if(!canCollect||!editing||kind!=='lessons')return;const amount=Number($('collectAmount').value);if(!(amount>0)){note('أدخل مبلغ التحصيل',true);return}
 if(!confirm('تأكيد استلام '+amount.toFixed(2)+' ر.ق وتسجيلها وربطها بالفاتورة؟'))return;
 $('collectSave').disabled=true;
