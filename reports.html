@@ -45,15 +45,16 @@ function renderRows(id,rows,cols){$(id).replaceChildren();if(!rows.length){const
 function csvDownload(filename,head,rows){const quote=x=>'"'+String(x??'').replace(/"/g,'""')+'"';const out='\ufeff'+[head,...rows].map(r=>r.map(quote).join(',')).join('\r\n');const u=URL.createObjectURL(new Blob([out],{type:'text/csv;charset=utf-8'}));const a=document.createElement('a');a.href=u;a.download=filename;a.click();setTimeout(()=>URL.revokeObjectURL(u),500)}
 async function getRows(table,cols,limit=1000){const {data,error}=await sb.from(table).select(cols).limit(limit);if(error)throw Error(table+': '+error.message);if(data.length>=limit)throw Error('وصل '+table+' إلى حد '+limit+' سجل: التقرير يحتاج صفحات إضافية');return data}
 function validDate(date){const from=$('from').value,to=$('to').value;return (!from||date>=from)&&(!to||date<=to)}
-function lessonLine(l){return [l.lesson_date,person(people,l.student_id),person(teachers,l.teacher_id),l.subject,(l.start_time||'').slice(0,5),fmt(l.hours),caption(l.status),caption(l.payment_status)]}
+function lessonLine(l){return [l.lesson_date,(l.participants||[l.student_id]).map(id=>person(people,id)).join('، '),person(teachers,l.teacher_id),l.subject,(l.start_time||'').slice(0,5),fmt(l.hours),caption(l.status),caption(l.payment_status)]}
 async function reports(){
  $('reportStatus').textContent='جارٍ إعداد التقرير...';try{
  if($('from').value&&$('to').value&&$('from').value>$('to').value)throw Error('تاريخ البداية بعد النهاية');
- const [allLessons,allServices]=await Promise.all([
+ const [allLessons,allServices,lessonParticipants]=await Promise.all([
  getRows('lessons','id,student_id,teacher_id,lesson_date,start_time,hours,subject,status,payment_status,is_archived'),
- getRows('educational_services','id,student_id,service_date,service_type,description,status,is_archived')]);
+ getRows('educational_services','id,student_id,service_date,service_type,description,status,is_archived'),getRows('lesson_participants','lesson_id,student_id')]);
+ const participantLookup=new Map();for(const p of lessonParticipants){if(!participantLookup.has(p.lesson_id))participantLookup.set(p.lesson_id,[]);participantLookup.get(p.lesson_id).push(p.student_id)}for(const l of allLessons)l.participants=participantLookup.get(l.id)||[l.student_id];
  const st=$('student').value,tc=$('teacher').value;
- const ls=allLessons.filter(l=>!l.is_archived&&validDate(l.lesson_date)&&(!st||l.student_id===st)&&(!tc||l.teacher_id===tc));
+ const ls=allLessons.filter(l=>!l.is_archived&&validDate(l.lesson_date)&&(!st||l.participants.includes(st))&&(!tc||l.teacher_id===tc));
  const sv=allServices.filter(s=>!s.is_archived&&validDate(s.service_date)&&(!st||s.student_id===st)&&!tc);
  lessonsCache=ls.map(lessonLine);
  renderRows('lessonRows',lessonsCache,8);
