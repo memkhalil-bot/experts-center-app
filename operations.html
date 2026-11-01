@@ -96,6 +96,7 @@ let role='',kind='lessons',uid='',canEdit=false,records=[],checkGrant=null,stude
 function note(s,error=false){$('status').textContent=s;$('status').className=error?'error':'ok'}
 function option(select,items){select.replaceChildren();const placeholder=document.createElement('option');placeholder.value='';placeholder.textContent='اختر...';select.append(placeholder);for(const item of items){const o=document.createElement('option');o.value=item.id;o.textContent=item.full_name;select.append(o)}}
 function nameOf(items,id){return items.find(x=>x.id===id)?.full_name||'—'}
+function studentTableLabel(id){const s=students.find(x=>x.id===id);return s?'طالب #'+s.student_code:'طالب (رقم غير متاح)'}
 function textCell(tr,content){const td=document.createElement('td');td.textContent=content??'—';tr.append(td);return td}
 function toggleCredit(){$('dueField').hidden=$('paymentTerms').value!=='credit';$('dueDate').required=$('paymentTerms').value==='credit';$('dueDate').max=addDays($('date').value,30);$('dueDate').min=$('date').value}
 function addDays(date,days){if(!date)return '';const d=new Date(date+'T12:00:00');d.setDate(d.getDate()+days);return d.toLocaleDateString('en-CA')}
@@ -119,7 +120,7 @@ function clearForm(){
 }
 $('student_id').addEventListener('change',()=>{if(editing||kind!=='lessons')return;const student=students.find(x=>x.id===$('student_id').value);if(!student)return;$('paymentTerms').value=student.default_payment_terms||'immediate';if(student.default_payment_terms==='credit')$('dueDate').value=addDays($('date').value,Math.min(30,Number(student.default_credit_days)||30));toggleCredit()});
 async function loadPeople(){
- const [s,t]=await Promise.all([supabase.from('students').select('id,full_name,default_payment_terms,default_credit_days').eq('is_archived',false).order('full_name').limit(1000),supabase.from('teachers').select('id,full_name').eq('is_archived',false).order('full_name').limit(1000)]);
+ const [s,t]=await Promise.all([supabase.from('students').select('id,full_name,student_code,default_payment_terms,default_credit_days').eq('is_archived',false).order('full_name').limit(1000),supabase.from('teachers').select('id,full_name').eq('is_archived',false).order('full_name').limit(1000)]);
  if(s.error||t.error){note('تعذر تحميل الطلاب والمدرسين، راجع الصلاحيات.',true);return false}
  students=s.data||[];teachers=t.data||[];option($('student_id'),students);option($('groupStudents'),students);$('groupStudents').selectedIndex=-1;groupPicker.refresh();option($('teacher_id'),teachers);configure();return true
 }
@@ -136,7 +137,7 @@ function render(){
  const filtered=records.filter(r=>{const hay=[...(r.participants||[r.student_id]).map(id=>nameOf(students,id)),nameOf(teachers,r.teacher_id),r.subject,r.description,serviceLabels[r.service_type]].join(' ').toLocaleLowerCase('ar');return (!q||hay.includes(q))&&(!date||(r.lesson_date||r.service_date)===date)});
  $('count').textContent=filtered.length+' سجل معروض (حد أقصى 500)';$('rows').replaceChildren();
  if(!filtered.length){const tr=document.createElement('tr');const td=textCell(tr,'لا توجد سجلات مطابقة');td.colSpan=kind==='lessons'?10:7;$('rows').append(tr);return}
- for(const rec of filtered){const tr=document.createElement('tr');textCell(tr,rec.lesson_date||rec.service_date);textCell(tr,kind==='lessons'&&rec.lesson_mode==='group'?(rec.participants||[rec.student_id]).map(id=>nameOf(students,id)).join('، '):nameOf(students,rec.student_id));
+ for(const rec of filtered){const tr=document.createElement('tr');textCell(tr,rec.lesson_date||rec.service_date);textCell(tr,kind==='lessons'&&rec.lesson_mode==='group'?(rec.participants||[rec.student_id]).map(id=>studentTableLabel(id)).join('، '):studentTableLabel(rec.student_id));
   if(kind==='lessons'){textCell(tr,nameOf(teachers,rec.teacher_id));textCell(tr,rec.subject);textCell(tr,rec.start_time?.slice(0,5));textCell(tr,rec.end_time?.slice(0,5));textCell(tr,rec.hours)}
   else{textCell(tr,serviceLabels[rec.service_type]);textCell(tr,rec.description)}
   textCell(tr,statusLabels[rec.status]||rec.status);textCell(tr,paymentLabels[rec.payment_status]||rec.payment_status);
