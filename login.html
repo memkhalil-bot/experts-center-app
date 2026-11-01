@@ -48,7 +48,7 @@ document.getElementById('forgot').addEventListener('click',async()=>{
  const {error}=await supabase.auth.resetPasswordForEmail(email,{redirectTo:location.origin+'/reset-password.html'});
  if(error)throw error;
  message.textContent='لو البريد مسجل في النظام، هيوصلك رابط لاستعادة كلمة المرور. راجع البريد الوارد والبريد غير المرغوب.';message.classList.add('success')
- }catch(e){message.textContent='تعذر إرسال طلب الاستعادة. حاول لاحقًا أو تواصل مع مدير النظام.';message.classList.add('error')}
+ }catch(e){const limited=e?.status===429||e?.code==='over_email_send_rate_limit';message.textContent=limited?'تم بلوغ الحد المؤقت لإرسال رسائل استعادة كلمة المرور. لا تكرر المحاولة الآن، وتواصل مع مدير النظام إذا كان الدخول عاجلًا.':'تعذر إرسال طلب الاستعادة. حاول لاحقًا أو تواصل مع مدير النظام.';message.classList.add('error')}
  finally{btn.disabled=false}
 });
 form.addEventListener('submit',async event=>{
