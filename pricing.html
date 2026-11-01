@@ -37,21 +37,22 @@ function td(tr,text){const cell=document.createElement('td');cell.textContent=te
 function heading(arr){const row=document.createElement('tr');for(const val of arr){const th=document.createElement('th');th.textContent=val;row.append(th)}$('thead').replaceChildren(row)}
 async function load(){
  const isLesson=kind==='lessons';
- $('listTitle').textContent=isLesson?'تفاصيل أسعار الحصص':'تفاصيل أسعار الخدمات';$('priceLabel').textContent=isLesson?'سعر ساعة الطالب (ر.ق)':'قيمة الخدمة (ر.ق)';$('teacherRateField').hidden=!isLesson;
- const [records,prices]=await Promise.all([
- supabase.from(kind==='lessons'?'lessons':'educational_services').select(isLesson?'id,student_id,teacher_id,lesson_date,hours,status,is_archived,subject':'id,student_id,service_date,description,status,is_archived').eq('is_archived',false).order(isLesson?'lesson_date':'service_date',{ascending:false}).limit(500),
- supabase.from(isLesson?'lesson_rates':'service_prices').select('*').limit(1000)
+ $('listTitle').textContent=isLesson?'تفاصيل أسعار الحصص':'تفاصيل أسعار الخدمات';$('priceLabel').textContent=isLesson?'سعر الحصة لكل طالب (ر.ق) — يعدّل من شاشة الحصة':'قيمة الخدمة (ر.ق)';$('teacherRateField').hidden=!isLesson;$('studentRate').readOnly=isLesson;
+ const [records,prices,part]=await Promise.all([
+ supabase.from(kind==='lessons'?'lessons':'educational_services').select(isLesson?'id,student_id,teacher_id,lesson_date,hours,lesson_mode,lesson_total_price,status,is_archived,subject':'id,student_id,service_date,description,status,is_archived').eq('is_archived',false).order(isLesson?'lesson_date':'service_date',{ascending:false}).limit(500),
+ supabase.from(isLesson?'lesson_rates':'service_prices').select('*').limit(1000),
+ isLesson?supabase.from('lesson_participants').select('lesson_id,student_id,price').limit(1000):Promise.resolve({data:[],error:null})
  ]);
- if(records.error||prices.error){msg('تعذّر تحميل بيانات التسعير: '+(records.error||prices.error).message,true);return}
+ if(records.error||prices.error||part.error){msg('تعذّر تحميل بيانات التسعير: '+(records.error||prices.error||part.error).message,true);return}
  items=records.data||[];rates=prices.data||[];
  const select=$('item');select.replaceChildren();const zero=document.createElement('option');zero.value='';zero.textContent='اختر السجل';select.append(zero);
  for(const item of items){const o=document.createElement('option');o.value=item.id;o.textContent=(item.lesson_date||item.service_date)+' — '+name(students,item.student_id)+' — '+(item.subject||item.description);select.append(o)}
- heading(isLesson?['التاريخ','الطالب','المدرس','المادة','الساعات','سعر الطالب/ساعة','مستحق المدرس/ساعة','القيمة','المستحق']:['التاريخ','الطالب','الوصف','القيمة']);
- $('rows').replaceChildren();let a=0,b=0,missing=0;
+ heading(isLesson?['التاريخ','الطلاب','المدرس','المادة','الساعات','سعر الحصة للطالب','مستحق المدرس/ساعة','الإجمالي','المستحق']:['التاريخ','الطالب','الوصف','القيمة']);
+ $('rows').replaceChildren();let a=0,b=0,missing=0;const members=new Map();for(const row of part.data||[]){if(!members.has(row.lesson_id))members.set(row.lesson_id,[]);members.get(row.lesson_id).push(row)}
  for(const item of items){const r=rates.find(p=>(isLesson?p.lesson_id:p.service_id)===item.id),tr=document.createElement('tr');
- td(tr,item.lesson_date||item.service_date);td(tr,name(students,item.student_id));
- if(isLesson){td(tr,name(teachers,item.teacher_id));td(tr,item.subject);td(tr,item.hours);td(tr,r?money(r.student_hourly_rate):'غير مسعر');td(tr,r?money(r.teacher_hourly_rate):'غير مسعر');
- const billed=r?Number(item.hours)*Number(r.student_hourly_rate):null,due=r?Number(item.hours)*Number(r.teacher_hourly_rate):null;td(tr,billed===null?'—':money(billed));td(tr,due===null?'—':money(due));
+ td(tr,item.lesson_date||item.service_date);td(tr,isLesson?(members.get(item.id)||[{student_id:item.student_id}]).map(p=>name(students,p.student_id)).join('، '):name(students,item.student_id));
+ if(isLesson){td(tr,name(teachers,item.teacher_id));td(tr,item.subject);td(tr,item.hours);td(tr,item.lesson_total_price!=null?money(item.lesson_total_price):'غير مسعر');td(tr,r?money(r.teacher_hourly_rate):'غير مسعر');
+ const billed=r?(members.get(item.id)||[]).reduce((sum,p)=>sum+Number(p.price),0):null,due=r?Number(item.hours)*Number(r.teacher_hourly_rate):null;td(tr,billed===null?'—':money(billed));td(tr,due===null?'—':money(due));
  if(item.status==='completed'&&r){a+=billed;b+=due}else if(item.status==='completed'&&!r)missing++;
  }else{td(tr,item.description);td(tr,r?money(r.amount):'غير مسعر')}
  $('rows').append(tr)}
@@ -59,16 +60,17 @@ async function load(){
  $('count').textContent=items.length+' سجل (حد أقصى 500)'+(missing?' · '+missing+' حصة مكتملة بدون سعر':'');
  $('studentRate').value='';$('teacherRate').value='';
 }
-$('item').addEventListener('change',()=>{const r=rates.find(p=>(kind==='lessons'?p.lesson_id:p.service_id)===$('item').value);$('studentRate').value=r?(kind==='lessons'?r.student_hourly_rate:r.amount):'';$('teacherRate').value=r?.teacher_hourly_rate??''});
+$('item').addEventListener('change',()=>{const r=rates.find(p=>(kind==='lessons'?p.lesson_id:p.service_id)===$('item').value);$('studentRate').value=r?(kind==='lessons'?(items.find(x=>x.id===$('item').value)?.lesson_total_price??''):r.amount):'';$('teacherRate').value=r?.teacher_hourly_rate??''});
 async function switchKind(next){kind=next;$('lessonsBtn').className=next==='lessons'?'selected':'secondary';$('servicesBtn').className=next==='educational_services'?'selected':'secondary';await load()}
 $('lessonsBtn').onclick=()=>switchKind('lessons');$('servicesBtn').onclick=()=>switchKind('educational_services');
 $('save').addEventListener('click',async()=>{if(role!=='super_admin'&&!grant('pricing.edit'))return;const id=$('item').value;
  const student=Number($('studentRate').value),teacher=Number($('teacherRate').value);
- if(!id||!$('studentRate').value||!Number.isFinite(student)||student<0||student>1000000||(kind==='lessons'&&(!$('teacherRate').value||!Number.isFinite(teacher)||teacher<0||teacher>1000000))){msg('اختر السجل وأدخل الأسعار بشكل صحيح.',true);return}
+ if(!id||(kind!=='lessons'&&!$('studentRate').value)||!Number.isFinite(student)||student<0||student>1000000||(kind==='lessons'&&(!$('teacherRate').value||!Number.isFinite(teacher)||teacher<0||teacher>1000000))){msg('اختر السجل وأدخل الأسعار بشكل صحيح.',true);return}
  $('save').disabled=true;const isLesson=kind==='lessons';
  const table=isLesson?'lesson_rates':'service_prices',pk=isLesson?'lesson_id':'service_id';
- const payload=isLesson?{student_hourly_rate:student,teacher_hourly_rate:teacher}:{amount:student};
+ const payload=isLesson?{teacher_hourly_rate:teacher}:{amount:student};
  const exists=rates.some(r=>r[pk]===id);let result;
+ if(isLesson&&!exists){msg('سجل سعر الحصة غير موجود. افتح الحصة وحدد سعر الطالب أولًا.',true);$('save').disabled=false;return}
  if(exists)result=await supabase.from(table).update({...payload,updated_by:uid}).eq(pk,id);
  else result=await supabase.from(table).insert({...payload,[pk]:id,created_by:uid,updated_by:uid});
  $('save').disabled=false;if(result.error){msg('فشل حفظ التسعير: '+result.error.message,true);return}
