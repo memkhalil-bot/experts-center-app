@@ -45,7 +45,7 @@ function renderRows(id,rows,cols){$(id).replaceChildren();if(!rows.length){const
 function csvDownload(filename,head,rows){const quote=x=>'"'+String(x??'').replace(/"/g,'""')+'"';const out='\ufeff'+[head,...rows].map(r=>r.map(quote).join(',')).join('\r\n');const u=URL.createObjectURL(new Blob([out],{type:'text/csv;charset=utf-8'}));const a=document.createElement('a');a.href=u;a.download=filename;a.click();setTimeout(()=>URL.revokeObjectURL(u),500)}
 async function getRows(table,cols,limit=1000){const {data,error}=await sb.from(table).select(cols).limit(limit);if(error)throw Error(table+': '+error.message);if(data.length>=limit)throw Error('وصل '+table+' إلى حد '+limit+' سجل: التقرير يحتاج صفحات إضافية');return data}
 function validDate(date){const from=$('from').value,to=$('to').value;return (!from||date>=from)&&(!to||date<=to)}
-function lessonLine(l){return [l.lesson_date,(l.participants||[l.student_id]).map(id=>person(people,id)).join('، '),person(teachers,l.teacher_id),l.subject,(l.start_time||'').slice(0,5),fmt(l.hours),caption(l.status),caption(l.payment_status)]}
+function lessonLine(l){const scope=$('student').value;return [l.lesson_date,(scope?[scope]:(l.participants||[l.student_id])).map(id=>person(people,id)).join('، '),person(teachers,l.teacher_id),l.subject,(l.start_time||'').slice(0,5),fmt(l.hours),caption(l.status),caption(l.payment_status)]}
 async function reports(){
  $('reportStatus').textContent='جارٍ إعداد التقرير...';try{
  if($('from').value&&$('to').value&&$('from').value>$('to').value)throw Error('تاريخ البداية بعد النهاية');
