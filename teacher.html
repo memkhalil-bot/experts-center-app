@@ -10,9 +10,9 @@
 <div><label for="teachPrice">قيمة الحصة لكل طالب (ريال)</label><input id="teachPrice" type="number" min="50" max="2000" step="0.01" required placeholder="50 إلى 2000"></div>
 <div class="teacher-full"><label for="teachNotes">ملاحظات</label><textarea id="teachNotes" maxlength="3000"></textarea></div>
 <div class="teacher-full"><button id="teachSave" type="submit">حفظ الحصة</button></div>
-</form></section><h2 id="listHeading" hidden>الحصص المسجلة</h2><div id="list">جارٍ التحقق من حساب المدرس...</div><p id="result" role="status"></p></main><script type="module">
+</form></section><h2 id="listHeading" hidden>الحصص المسجلة</h2><div id="list">جارٍ التحقق من حساب المدرس...</div><p id="result" role="status"></p></main><script src="./student-picker.js"></script><script type="module">
 import{createClient}from'https://esm.sh/@supabase/supabase-js@2.57.0';
-const db=createClient('https://uqjoxgcddpwfbjanzqpy.supabase.co','sb_publishable_-FhtYmDD0qO6mEB2nBE_rQ_j_SE_unY'),$=x=>document.getElementById(x);
+const db=createClient('https://uqjoxgcddpwfbjanzqpy.supabase.co','sb_publishable_-FhtYmDD0qO6mEB2nBE_rQ_j_SE_unY'),$=x=>document.getElementById(x);const teacherPicker=window.AlKhubaraStudentPicker('teachStudents');
 let adminMode=false,teacherNames=new Map();
 function emptyState(teacher){const list=$('list');list.replaceChildren();const panel=document.createElement('section');panel.className='empty-state';const icon=document.createElement('span');icon.className='empty-icon';icon.setAttribute('aria-hidden','true');icon.textContent='▤';const title=document.createElement('h2');title.textContent=adminMode?'لا توجد حصص مسجلة حتى الآن':'لا توجد حصص مرتبطة بحسابك';const description=document.createElement('p');description.textContent=adminMode?(teacher?'لم يتم تسجيل حصص لهذا المدرس. يمكنك إضافتها من إدارة الحصص.':'لم تتم إضافة أي حصص للمدرسين بعد. أضف أول حصة من صفحة الحصص والخدمات لتظهر هنا.'): 'ستظهر حصصك هنا بعد أن تقوم الإدارة بجدولتها لك.';panel.append(icon,title,description);if(adminMode){const link=document.createElement('a');link.className='empty-action';link.href='./operations.html';link.textContent='الانتقال إلى إدارة الحصص';link.onclick=e=>{if(window.parent!==window){e.preventDefault();parent.postMessage({type:'alkhubara:navigate',route:'operations'},location.origin)}};panel.append(link)}list.append(panel)}
 async function display(teacher){let query=db.from('lessons').select('id,teacher_id,lesson_date,start_time,end_time,subject,status,lesson_location,lesson_mode,lesson_total_price').eq('is_archived',false).order('lesson_date',{ascending:false}).limit(100);if(teacher)query=query.eq('teacher_id',teacher);const {data,error}=await query;const list=$('list');list.replaceChildren();if(error){list.textContent=error.message;return}if(!data.length){emptyState(teacher);return}
@@ -42,7 +42,7 @@ $('teacherCreate').hidden=false;$('listHeading').hidden=false;
 const {data:refs,error:refError}=await db.rpc('lesson_teacher_options');
 if(refError){$('result').textContent='تعذر تحميل أسماء الطلاب والمواد: '+refError.message;return}
 function fillOptions(id,rows,asObject){const field=$(id);field.replaceChildren();for(const item of rows){const opt=document.createElement('option');opt.value=asObject?item.id:item;opt.textContent=asObject?item.full_name:item;field.append(opt)}if(id==='teachStudents')field.selectedIndex=-1}
-fillOptions('teachStudent',refs.students||[],true);fillOptions('teachStudents',refs.students||[],true);fillOptions('teachSubject',refs.subjects||[],false);
+fillOptions('teachStudent',refs.students||[],true);fillOptions('teachStudents',refs.students||[],true);teacherPicker.refresh();fillOptions('teachSubject',refs.subjects||[],false);
 $('teachDate').value=new Date().toLocaleDateString('en-CA');
 $('teachMode').onchange=()=>{$('teachSingleField').hidden=$('teachMode').value==='group';$('teachGroupField').hidden=$('teachMode').value!=='group'};
 $('teacherLessonForm').onsubmit=async ev=>{ev.preventDefault();
@@ -55,7 +55,7 @@ $('teacherLessonForm').onsubmit=async ev=>{ev.preventDefault();
  $('teachSave').disabled=true;const {error:saveError}=await db.rpc('save_lesson_session',{p_lesson:null,p_fields:fields,p_students:participants,p_price:price});
  $('teachSave').disabled=false;if(saveError){$('result').textContent='تعذر تسجيل الحصة: '+saveError.message;return}
  $('result').textContent='تم تسجيل '+(isGroup?'الحصة الجماعية':'الحصة الفردية')+' بنجاح. ستظهر في حصصك.';
- $('teacherLessonForm').reset();$('teachMode').onchange();$('teachDate').value=new Date().toLocaleDateString('en-CA');await display(p.teacher_id);
+ $('teacherLessonForm').reset();teacherPicker.clear();$('teachMode').onchange();$('teachDate').value=new Date().toLocaleDateString('en-CA');await display(p.teacher_id);
 };
 await display(p.teacher_id)
 })()
