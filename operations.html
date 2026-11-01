@@ -97,7 +97,8 @@ function note(s,error=false){$('status').textContent=s;$('status').className=err
 function option(select,items){select.replaceChildren();const placeholder=document.createElement('option');placeholder.value='';placeholder.textContent='اختر...';select.append(placeholder);for(const item of items){const o=document.createElement('option');o.value=item.id;o.textContent=item.full_name;select.append(o)}}
 function nameOf(items,id){return items.find(x=>x.id===id)?.full_name||'—'}
 function studentTableLabel(id){const s=students.find(x=>x.id===id);return s?'طالب #'+s.student_code:'طالب (رقم غير متاح)'}
-function textCell(tr,content){const td=document.createElement('td');td.textContent=content??'—';tr.append(td);return td}
+function anonymizeStudentText(v){let t=String(v??'—');for(const s of students){if(s.full_name&&s.full_name.length>=2)t=t.split(s.full_name).join(studentTableLabel(s.id))}return t}
+function textCell(tr,content){const td=document.createElement('td');td.textContent=anonymizeStudentText(content);tr.append(td);return td}
 function toggleCredit(){$('dueField').hidden=$('paymentTerms').value!=='credit';$('dueDate').required=$('paymentTerms').value==='credit';$('dueDate').max=addDays($('date').value,30);$('dueDate').min=$('date').value}
 function addDays(date,days){if(!date)return '';const d=new Date(date+'T12:00:00');d.setDate(d.getDate()+days);return d.toLocaleDateString('en-CA')}
 $('lessonMode').addEventListener('change',()=>{configure();$('student_id').value='';groupPicker.clear()});
