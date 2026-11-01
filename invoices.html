@@ -17,14 +17,14 @@ import{createClient}from'https://esm.sh/@supabase/supabase-js@2.57.0';
 const db=createClient('https://uqjoxgcddpwfbjanzqpy.supabase.co',"sb_publishable_-FhtYmDD0qO6mEB2nBE_rQ_j_SE_unY");
 async function allowed(k){const {data,error}=await db.rpc('has_staff_permission',{permission_key:k});if(error)throw Error(error.message);return data===true}
 const $=id=>document.getElementById(id);let userId='',role='',students=[],sources=[],invoices=[],receipts=[],allocations=[],entries=[];
-const m=n=>Number(n||0).toLocaleString('ar-QA',{minimumFractionDigits:2,maximumFractionDigits:2}),name=id=>students.find(x=>x.id===id)?.full_name||'—';
+const m=n=>Number(n||0).toLocaleString('ar-QA',{minimumFractionDigits:2,maximumFractionDigits:2}),name=id=>{const s=students.find(x=>x.id===id);return s?'طالب #'+s.student_code:'طالب (رقم غير متاح)'};
 function option(s,value,label){const o=document.createElement('option');o.value=value;o.textContent=label;s.append(o)}
 function msg(t){$('status').textContent=t}
-function cell(tr,v){const td=document.createElement('td');td.textContent=String(v);tr.append(td)}
+function cell(tr,v){const td=document.createElement('td');let value=String(v);for(const s of students){if(s.full_name&&s.full_name.length>=2)value=value.split(s.full_name).join(name(s.id))}td.textContent=value;tr.append(td)}
 async function query(t,cols){const{data,error}=await db.from(t).select(cols).limit(500);if(error)throw Error(error.message);if(data.length===500)throw Error('وصلت البيانات لحد 500 سجل: التقرير غير مكتمل');return data}
 async function load(){try{msg('جارٍ التحميل...');
 const [s,ls,sv,lr,spr,inv,fin,al,lp]=await Promise.all([
-query('students','id,full_name'),query('lessons','id,student_id,hours,subject,status,is_archived'),query('educational_services','id,student_id,description,status,is_archived'),query('lesson_rates','lesson_id,student_hourly_rate'),query('service_prices','service_id,amount'),query('invoices','id,invoice_no,student_id,lesson_id,service_id,amount,issued_at'),query('financial_entries','id,entry_type,student_id,amount,reverses_entry_id'),query('receipt_allocations','id,receipt_id,invoice_id,amount'),query('lesson_participants','lesson_id,student_id,price')]);
+query('students','id,full_name,student_code'),query('lessons','id,student_id,hours,subject,status,is_archived'),query('educational_services','id,student_id,description,status,is_archived'),query('lesson_rates','lesson_id,student_hourly_rate'),query('service_prices','service_id,amount'),query('invoices','id,invoice_no,student_id,lesson_id,service_id,amount,issued_at'),query('financial_entries','id,entry_type,student_id,amount,reverses_entry_id'),query('receipt_allocations','id,receipt_id,invoice_id,amount'),query('lesson_participants','lesson_id,student_id,price')]);
 students=s;invoices=inv;entries=fin;allocations=al;
 const invoicedLessons=new Set(inv.filter(x=>x.lesson_id).map(i=>i.lesson_id+'|'+i.student_id));
 const invoicedServices=new Set(inv.filter(x=>x.service_id).map(i=>i.service_id));
