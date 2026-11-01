@@ -127,7 +127,7 @@ const labels={receipt:'تحصيل',expense:'مصروف',teacher_payment:'صرف 
 const roleLabels={accountant:'محاسب',admin:'مدير',super_admin:'مدير عام'};
 const money=v=>Number(v||0).toLocaleString('ar-QA',{minimumFractionDigits:2,maximumFractionDigits:2});
 function msg(t,bad=false){$('message').textContent=t;$('message').className=bad?'error':'ok'}
-function cell(tr,v){const td=document.createElement('td');td.textContent=v==null?'—':String(v);tr.append(td);return td}
+function cell(tr,v){const td=document.createElement('td');td.textContent=redactStudentNames(v);tr.append(td);return td}
 function fill(select,items){select.replaceChildren();const empty=document.createElement('option');empty.value='';empty.textContent='اختر...';select.append(empty);for(const item of items){const op=document.createElement('option');op.value=item.id;op.textContent=item.full_name;select.append(op)}}
 function setType(){const type=$('entry_type').value;$('studentField').hidden=type!=='receipt';$('teacherField').hidden=type!=='teacher_payment';$('student_id').required=type==='receipt';$('teacher_id').required=type==='teacher_payment'}
 function studentLabel(id){const s=students.find(x=>x.id===id);return s?'طالب #'+s.student_code:'طالب (رقم غير متاح)'}
