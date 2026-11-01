@@ -113,12 +113,12 @@ async function loadCredits(){
  ...[...serviceMap.values()].filter(x=>!invoicedServices.has(x.id)).map(src=>({src,student_id:src.student_id,price:null,kind:'خدمة'}))
  ];
  $('creditCount').textContent=rows.length+' فاتورة آجلة · '+unbilled.length+' بانتظار الفوترة';const body=$('creditRows');body.replaceChildren();
- for(const {inv,src,balance} of rows){const tr=document.createElement('tr');const name=students.find(x=>x.id===inv.student_id)?.full_name||'—';
+ for(const {inv,src,balance} of rows){const tr=document.createElement('tr');const name=studentLabel(inv.student_id);
  const paidAmount=paid.get(inv.id)||0;const due=src.due_date||'—';
  const state=balance<=0?'محصل':paidAmount>0?'محصل جزئيًا':(due!=='—'&&due<new Date().toISOString().slice(0,10)?'متأخر':'آجل');
- for(const value of [name,src.subject||src.description,inv.invoice_no,due,money(inv.amount),money(paidAmount),money(balance),state])cell(tr,value);const actions=cell(tr,'');if(financeEditor()){const link=document.createElement('a');link.href='./invoices.html';link.textContent='مراجعة / تصحيح الفاتورة';link.onclick=ev=>{if(window.parent!==window){ev.preventDefault();parent.postMessage({type:'alkhubara:navigate',route:'invoices'},location.origin)}};actions.append(link)}else actions.textContent='عرض فقط';body.append(tr)}
- for(const {src,kind,student_id,price} of unbilled){const tr=document.createElement('tr');const name=students.find(x=>x.id===student_id)?.full_name||'—';
- for(const value of [name,kind+' — '+(src.subject||src.description||'—'),'لم تُصدر',src.due_date||'—',price!=null?money(price):'لم يُسعَّر بعد','—',price!=null?money(price):'—','بانتظار الفوترة'])cell(tr,value);const td=cell(tr,'');const link=document.createElement('a');link.href='./operations.html';link.textContent='فتح المصدر للتعديل';link.onclick=ev=>{if(window.parent!==window){ev.preventDefault();parent.postMessage({type:'alkhubara:navigate',route:'operations'},location.origin)}};td.append(link);
+ for(const value of [name,redactStudentNames(src.subject||src.description),inv.invoice_no,due,money(inv.amount),money(paidAmount),money(balance),state])cell(tr,value);const actions=cell(tr,'');if(financeEditor()){const link=document.createElement('a');link.href='./invoices.html';link.textContent='مراجعة / تصحيح الفاتورة';link.onclick=ev=>{if(window.parent!==window){ev.preventDefault();parent.postMessage({type:'alkhubara:navigate',route:'invoices'},location.origin)}};actions.append(link)}else actions.textContent='عرض فقط';body.append(tr)}
+ for(const {src,kind,student_id,price} of unbilled){const tr=document.createElement('tr');const name=studentLabel(student_id);
+ for(const value of [name,redactStudentNames(kind+' — '+(src.subject||src.description||'—')),'لم تُصدر',src.due_date||'—',price!=null?money(price):'لم يُسعَّر بعد','—',price!=null?money(price):'—','بانتظار الفوترة'])cell(tr,value);const td=cell(tr,'');const link=document.createElement('a');link.href='./operations.html';link.textContent='فتح المصدر للتعديل';link.onclick=ev=>{if(window.parent!==window){ev.preventDefault();parent.postMessage({type:'alkhubara:navigate',route:'operations'},location.origin)}};td.append(link);
  body.append(tr)}
  if(!rows.length&&!unbilled.length){const tr=document.createElement('tr');const td=cell(tr,'لا توجد مستحقات آجلة');td.colSpan=9;body.append(tr)}
 }
@@ -130,9 +130,11 @@ function msg(t,bad=false){$('message').textContent=t;$('message').className=bad?
 function cell(tr,v){const td=document.createElement('td');td.textContent=v==null?'—':String(v);tr.append(td);return td}
 function fill(select,items){select.replaceChildren();const empty=document.createElement('option');empty.value='';empty.textContent='اختر...';select.append(empty);for(const item of items){const op=document.createElement('option');op.value=item.id;op.textContent=item.full_name;select.append(op)}}
 function setType(){const type=$('entry_type').value;$('studentField').hidden=type!=='receipt';$('teacherField').hidden=type!=='teacher_payment';$('student_id').required=type==='receipt';$('teacher_id').required=type==='teacher_payment'}
-function person(items,id){return items.find(x=>x.id===id)?.full_name||'—'}
+function studentLabel(id){const s=students.find(x=>x.id===id);return s?'طالب #'+s.student_code:'طالب (رقم غير متاح)'}
+function redactStudentNames(value){let text=String(value??'—');for(const s of students){if(s.full_name&&s.full_name.trim().length>=2)text=text.split(s.full_name).join(studentLabel(s.id))}return text}
+function person(items,id){return items===students?studentLabel(id):items.find(x=>x.id===id)?.full_name||'—'}
 async function loadPeople(){
- const [s,t]=await Promise.all([supabase.from('students').select('id,full_name').eq('is_archived',false).limit(1000).order('full_name'),supabase.from('teachers').select('id,full_name').eq('is_archived',false).limit(1000).order('full_name')]);
+ const [s,t]=await Promise.all([supabase.from('students').select('id,full_name,student_code').eq('is_archived',false).limit(1000).order('full_name'),supabase.from('teachers').select('id,full_name').eq('is_archived',false).limit(1000).order('full_name')]);
  if(s.error||t.error){msg('تعذر تحميل الأطراف: '+(s.error||t.error).message,true);return}
  students=s.data||[];teachers=t.data||[];fill($('student_id'),students);fill($('teacher_id'),teachers);
 }
@@ -149,7 +151,7 @@ async function load(){
  }
  $('receipts').textContent=money(totals.receipt);$('expenses').textContent=money(totals.expense);$('teachersPaid').textContent=money(totals.teacher_payment);
  if(!entries.length){const tr=document.createElement('tr');const td=cell(tr,'لا توجد حركات مالية بعد');td.colSpan=7;$('rows').append(tr)}
- for(const e of entries){const tr=document.createElement('tr');cell(tr,e.entry_date);cell(tr,labels[e.entry_type]||e.entry_type);cell(tr,e.entry_type==='receipt'?person(students,e.student_id):e.entry_type==='teacher_payment'?person(teachers,e.teacher_id):'—');cell(tr,e.category);cell(tr,(e.entry_type==='reversal'?'-':'')+money(e.amount));cell(tr,e.reference_number);
+ for(const e of entries){const tr=document.createElement('tr');cell(tr,e.entry_date);cell(tr,labels[e.entry_type]||e.entry_type);cell(tr,e.entry_type==='receipt'?person(students,e.student_id):e.entry_type==='teacher_payment'?person(teachers,e.teacher_id):'—');cell(tr,redactStudentNames(e.category));cell(tr,(e.entry_type==='reversal'?'-':'')+money(e.amount));cell(tr,e.reference_number);
   const td=document.createElement('td');td.className='action-buttons';if((role==='super_admin'||grant('finance.edit'))&&e.entry_type!=='reversal'&&!reversed.has(e.id)){
    const edit=document.createElement('button');edit.type='button';edit.className='secondary';edit.textContent='تعديل';edit.onclick=()=>startEntryEdit(e);td.append(edit);
    const b=document.createElement('button');b.type='button';b.className='secondary';b.textContent='حذف / إلغاء';b.addEventListener('click',()=>reverse(e,b));td.append(b)
