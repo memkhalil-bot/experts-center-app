@@ -81,3 +81,15 @@ table button{font-size:12px!important;min-height:36px!important;margin:2px!impor
 .kh-password-toggle:hover{background:#e5f1e9!important;filter:none!important}
 .kh-password-toggle:active{transform:translateY(-50%)!important}
 [aria-invalid="true"]{border-color:#b9473f!important;box-shadow:0 0 0 2px #f8deda!important}
+
+/* Group lesson student selector */
+.student-picker{border:1px solid #d6e5da;border-radius:12px;padding:12px;background:#f9fcfa}
+.student-picker .student-picker-search{width:100%;margin-bottom:9px;padding:9px 12px;background:#fff;border:1px solid #cbded0;border-radius:8px;min-height:42px}
+.student-picker-count{font-size:12px;font-weight:800;padding:2px 1px 9px}
+.student-picker-list{max-height:210px;overflow-y:auto;display:grid;gap:3px;scrollbar-width:thin}
+.student-picker-option{display:flex!important;align-items:center;gap:12px;padding:9px 11px;border:1px solid transparent;border-radius:8px;cursor:pointer;font-weight:650;font-size:13px;margin:0!important;background:#fff}
+.student-picker-option:has(input:checked){background:#eaf5ed;border-color:#b9daca;color:#115a41}
+.student-picker-option:hover{border-color:#bdd7c4}
+.student-picker-option input[type="checkbox"]{width:18px;height:18px;min-width:18px;accent-color:#12684e;cursor:pointer;flex:none}
+.student-picker-empty{color:#6e7f73;padding:13px;text-align:center;font-size:13px}
+@media(max-width:680px){.student-picker-list{max-height:250px}.student-picker-option{min-height:46px}.student-picker{padding:10px}}
