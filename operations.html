@@ -69,11 +69,11 @@ body{background:#f5f7f6}
 <button class="secondary" id="reload" type="button">تحديث</button></div></div>
 <div class="tablewrap"><table><thead><tr id="head"></tr></thead><tbody id="rows"></tbody></table></div></div>
 </main></div>
-<script type="module">
+<script src="./student-picker.js"></script><script type="module">
 import {createClient} from 'https://esm.sh/@supabase/supabase-js@2.57.0';
 const supabase=createClient('https://uqjoxgcddpwfbjanzqpy.supabase.co',"sb_publishable_-FhtYmDD0qO6mEB2nBE_rQ_j_SE_unY");
 async function getGrants(client){const{data,error}=await client.from('user_permissions').select('permission');if(error)throw Error(error.message);const allowed=new Set((data||[]).map(x=>x.permission));return key=>allowed.has(key)}
-const $=id=>document.getElementById(id);
+const $=id=>document.getElementById(id);const groupPicker=window.AlKhubaraStudentPicker('groupStudents');
 const minutes=v=>{const m=/^(\d\d):(\d\d)$/.exec(v||'');return m?Number(m[1])*60+Number(m[2]):NaN};
 function calculateHours(){const diff=minutes($('end_time').value)-minutes($('start_time').value);const valid=diff>0&&diff<=720;$('hours').value=valid?(diff/60).toFixed(2):'';refreshPrice();return valid}
 $('start_time').addEventListener('change',calculateHours);$('end_time').addEventListener('change',calculateHours);
@@ -99,7 +99,7 @@ function nameOf(items,id){return items.find(x=>x.id===id)?.full_name||'—'}
 function textCell(tr,content){const td=document.createElement('td');td.textContent=content??'—';tr.append(td);return td}
 function toggleCredit(){$('dueField').hidden=$('paymentTerms').value!=='credit';$('dueDate').required=$('paymentTerms').value==='credit';$('dueDate').max=addDays($('date').value,30);$('dueDate').min=$('date').value}
 function addDays(date,days){if(!date)return '';const d=new Date(date+'T12:00:00');d.setDate(d.getDate()+days);return d.toLocaleDateString('en-CA')}
-$('lessonMode').addEventListener('change',()=>{configure();$('student_id').value='';$('groupStudents').selectedIndex=-1});
+$('lessonMode').addEventListener('change',()=>{configure();$('student_id').value='';groupPicker.clear()});
 $('date').addEventListener('change',toggleCredit);
 $('paymentTerms').addEventListener('change',toggleCredit);
 function configure(){
@@ -115,13 +115,13 @@ function configure(){
  $('noPeople').hidden=students.length>0 && (!lesson||teachers.length>0);toggleCredit();
 }
 function clearForm(){
- editing=null;priceData=[];$('lessonMode').value='individual';$('groupStudents').selectedIndex=-1;$('collectPanel').hidden=true;$('form').reset();$('lessonPrice').value='';$('dueDate').value='';$('end_time').value='10:00';$('date').value=new Date().toLocaleDateString('en-CA');$('start_time').value='09:00';calculateHours();$('cancel').hidden=true;configure();
+ editing=null;priceData=[];$('lessonMode').value='individual';groupPicker.clear();$('collectPanel').hidden=true;$('form').reset();$('lessonPrice').value='';$('dueDate').value='';$('end_time').value='10:00';$('date').value=new Date().toLocaleDateString('en-CA');$('start_time').value='09:00';calculateHours();$('cancel').hidden=true;configure();
 }
 $('student_id').addEventListener('change',()=>{if(editing||kind!=='lessons')return;const student=students.find(x=>x.id===$('student_id').value);if(!student)return;$('paymentTerms').value=student.default_payment_terms||'immediate';if(student.default_payment_terms==='credit')$('dueDate').value=addDays($('date').value,Math.min(30,Number(student.default_credit_days)||30));toggleCredit()});
 async function loadPeople(){
  const [s,t]=await Promise.all([supabase.from('students').select('id,full_name,default_payment_terms,default_credit_days').eq('is_archived',false).order('full_name').limit(1000),supabase.from('teachers').select('id,full_name').eq('is_archived',false).order('full_name').limit(1000)]);
  if(s.error||t.error){note('تعذر تحميل الطلاب والمدرسين، راجع الصلاحيات.',true);return false}
- students=s.data||[];teachers=t.data||[];option($('student_id'),students);option($('groupStudents'),students);$('groupStudents').selectedIndex=-1;option($('teacher_id'),teachers);configure();return true
+ students=s.data||[];teachers=t.data||[];option($('student_id'),students);option($('groupStudents'),students);$('groupStudents').selectedIndex=-1;groupPicker.refresh();option($('teacher_id'),teachers);configure();return true
 }
 async function load(){
  const key=kind==='lessons'?'lessons':'services';canEdit=role==='super_admin'||checkGrant(key+'.edit');$('editor').hidden=!canEdit;$('readonly').hidden=canEdit;if(role!=='super_admin'&&!canEdit&&!checkGrant(key+'.view')){note('ليس لديك صلاحية لهذا القسم',true);$('rows').replaceChildren();return}
@@ -146,7 +146,7 @@ function render(){
   a.addEventListener('click',async()=>{if(!confirm((rec.is_archived?'استعادة':'أرشفة')+' هذا السجل؟'))return;a.disabled=true;const {error}=await supabase.from(kind).update({is_archived:!rec.is_archived,updated_by:uid}).eq('id',rec.id);if(error)note('فشل تحديث الحالة: '+error.message,true);else{note('تم تحديث الحالة');await load()}a.disabled=false});td.append(a)}
   else td.textContent='عرض فقط';tr.append(td);$('rows').append(tr)}
 }
-function edit(r){editing=r.id;if(kind==='lessons'){$('lessonMode').value=r.lesson_mode||'individual';configure();const selected=r.participants||[r.student_id];for(const o of $('groupStudents').options)o.selected=selected.includes(o.value)}$('student_id').value=r.student_id;$('date').value=r.lesson_date||r.service_date;$('statusInput').value=r.status;$('payment_status').value=r.payment_status;$('paymentTerms').value=r.payment_terms||'immediate';$('dueDate').value=r.due_date||'';toggleCredit();
+function edit(r){editing=r.id;if(kind==='lessons'){$('lessonMode').value=r.lesson_mode||'individual';configure();const selected=r.participants||[r.student_id];for(const o of $('groupStudents').options)o.selected=selected.includes(o.value);groupPicker.refresh()}$('student_id').value=r.student_id;$('date').value=r.lesson_date||r.service_date;$('statusInput').value=r.status;$('payment_status').value=r.payment_status;$('paymentTerms').value=r.payment_terms||'immediate';$('dueDate').value=r.due_date||'';toggleCredit();
  if(kind==='lessons'){$('teacher_id').value=r.teacher_id;$('start_time').value=r.start_time?.slice(0,5)||'09:00';$('end_time').value=r.end_time?.slice(0,5)||'10:00';calculateHours();$('subject').value=r.subject;$('lesson_location').value=r.lesson_location||'center';$('notes').value=r.notes||''}
  else{$('service_type').value=r.service_type;$('description').value=r.description}
  loadPrice();$('formTitle').textContent='تعديل سجل';$('save').textContent='حفظ التعديل';$('cancel').hidden=false;window.scrollTo({top:0,behavior:'smooth'})}
