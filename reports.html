@@ -38,7 +38,7 @@ let role='',people=[],teachers=[],lessonsCache=[],auditCache=[],auditOffset=0,st
 let grant=()=>false;const financeRoles=['accountant','admin','super_admin'],manageRoles=['admin','super_admin'];
 const labels={scheduled:'مجدولة',confirmed:'مؤكدة',completed:'مكتملة',cancelled:'ملغاة',new:'جديدة',in_progress:'قيد التنفيذ',unpaid:'غير مدفوع',partial:'جزئي',paid:'مدفوع',homework:'واجب',research:'بحث',project:'مشروع',other:'أخرى'};
 const typeNames={students:'الطلاب',teachers:'المدرسون',lessons:'الحصص',educational_services:'الخدمات',lesson_rates:'أسعار الحصص',service_prices:'أسعار الخدمات',financial_entries:'القيود المالية',invoices:'الفواتير',receipt_allocations:'توزيع الدفعات'};
-function caption(x){return labels[x]||x||'—'}function person(arr,id){return arr.find(p=>p.id===id)?.full_name||'—'}
+function caption(x){return labels[x]||x||'—'}function person(arr,id){const row=arr.find(p=>p.id===id);return arr===people?(row?'طالب #'+row.student_code:'طالب (رقم غير متاح)'):(row?.full_name||'—')}
 function td(tr,v){const e=document.createElement('td');e.textContent=String(v??'—');tr.append(e)}
 function options(id,arr){const el=$(id);el.replaceChildren();const all=document.createElement('option');all.value='';all.textContent='الكل';el.append(all);for(const p of arr){const o=document.createElement('option');o.value=p.id;o.textContent=p.full_name;el.append(o)}}
 function renderRows(id,rows,cols){$(id).replaceChildren();if(!rows.length){const tr=document.createElement('tr');const c=document.createElement('td');c.colSpan=cols;c.textContent='لا توجد بيانات مطابقة';tr.append(c);$(id).append(tr);return}for(const values of rows){const tr=document.createElement('tr');values.forEach(x=>td(tr,x));$(id).append(tr)}}
@@ -102,7 +102,7 @@ $('logout').onclick=async()=>{await sb.auth.signOut();location.replace('./login.
  const {data:p,error:pe}=await sb.from('staff_profiles').select('role,is_active').eq('user_id',user.id).single();
  if(pe||!p?.is_active)throw Error('permission');grant=await getGrants(sb);if(p.role!=='super_admin'&&!grant('reports.view')&&!grant('audit.view'))throw Error('permission');
  role=p.role;$('financePanel').hidden=!(role==='super_admin'||grant('finance.view')||grant('finance.edit'));$('auditTab').hidden=!(role==='super_admin'||grant('audit.view'));
- const [s,t]=await Promise.all([getRows('students','id,full_name'),getRows('teachers','id,full_name')]);people=s;teachers=t;options('student',people);options('teacher',teachers);
+ const [s,t]=await Promise.all([getRows('students','id,full_name,student_code'),getRows('teachers','id,full_name')]);people=s;teachers=t;options('student',people);options('teacher',teachers);
  if((role==='super_admin'||grant('audit.view'))){const {data,error}=await sb.from('staff_profiles').select('user_id,full_name').limit(500);if(!error){staff=data;const select=$('auditActor');select.replaceChildren();const all=document.createElement('option');all.value='';all.textContent='الكل';select.append(all);for(const p of staff){const op=document.createElement('option');op.value=p.user_id;op.textContent=p.full_name;select.append(op)}}}
  $('gate').remove();$('app').style.display='block';await reports()
  }catch(e){location.replace('./login.html')}})();
